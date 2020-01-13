@@ -1,0 +1,7 @@
+#!/bin/bash
+
+o="smtcmp-release"
+
+[ "$GOOS" = "windows" ] && o="$o.exe"
+
+go build -ldflags="-w -s" -o "$o"
