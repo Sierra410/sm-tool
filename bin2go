@@ -1,0 +1,46 @@
+#!/bin/bash
+
+print() {
+	echo "$*" >&2
+}
+
+usage() {
+	print "Usage: go2bin filename (varname)"
+}
+
+varnamesan() {
+	cut -f1 | sed 's/^[0-9]*//' | sed -r 's/[^A-Za-z0-9]//g'
+}
+
+if [ -z "$1" ]; then
+	usage
+	exit 1
+fi
+
+fin="$1"
+
+if [ "$fin" = "-" ]; then
+	fin="binaryData"
+	exec 3<&0
+else
+	if [ ! -r "$1" ]; then
+		print "$1 doesn't exist or isn't readable!"
+		exit 1
+	fi
+
+	exec 3<"$1"
+fi
+
+
+if [ ! -z "$2" ]; then
+	varname=$(echo "$2" | varnamesan)
+else
+	varname=$(echo "$fin" | varnamesan)
+fi
+
+echo "package main"
+echo
+echo "var $varname = []byte{"
+echo "$(xxd -i <&3 | sed 's/^  /\t/g'),"
+echo "}"
+

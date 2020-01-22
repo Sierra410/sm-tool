@@ -1,7 +1,41 @@
 #!/bin/bash
 
-o="smtcmp-release"
+GOOS=$(go env GOOS)
 
-[ "$GOOS" = "windows" ] && o="$o.exe"
+if [ ! -z "$R" ]; then
+	echo Release build
+	bdir="./bin/release/$GOOS"
+	flags='-ldflags="-w -s"'
+else
+	bdir="./bin/debug/$GOOS"
+	flags=''
+fi
+mkdir -p "$bdir"
 
-go build -ldflags="-w -s" -o "$o"
+oname="$bdir/%s"
+[ "$GOOS" = "windows" ] && oname="$oname.exe"
+
+build() {
+	export SRCDIR=$(realpath "$1")
+	export ONAME=$(basename "$1")
+	export OFILE=$(printf "$oname" "$ONAME")
+	
+	if [ -f "$SRCDIR/main.go" ]; then
+		echo "Building $ONAME"
+		
+		local dobuild=true
+		
+		if [ -x "$SRCDIR/build" ]; then
+			echo "Running custom build..."
+			"$SRCDIR/build" "$bdir" || dobuild=false
+		fi
+		
+		[ "$dobuild" = true ] && go build -o "$OFILE" "$SRCDIR" || echo "Compilation failed [$?]"
+	fi
+}
+
+[ $# = 0 ] && l=./* || l="$@"
+
+for x in $l; do
+	build $x
+done

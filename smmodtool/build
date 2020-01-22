@@ -1,0 +1,15 @@
+#!/bin/bash
+
+printf 'package main
+
+var gladeMain = `%s`
+' "$(cat ./smmodtool/main.glade | sed 's/`/\\`/g')" > ./smmodtool/gladeMain.go
+
+if [ "$GOOS" = windows ]; then
+	CGO_ENABLED=1 \
+	CC=x86_64-w64-mingw32-cc \
+	GOARCH=amd64 \
+	go build -ldflags '-H=windowsgui' -o "$OFILE" "$SRCDIR"
+	
+	exit 1 # don't build with main script
+fi
