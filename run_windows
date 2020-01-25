@@ -1,0 +1,7 @@
+#!/bin/bash
+
+exe="$(realpath "$1")"
+
+cd /usr/x86_64-w64-mingw32/bin
+
+wine "$exe"

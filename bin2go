@@ -5,7 +5,7 @@ print() {
 }
 
 usage() {
-	print "Usage: go2bin filename (varname)"
+	print "Usage: bin2go filename (varname)"
 }
 
 varnamesan() {

@@ -30,7 +30,7 @@ build() {
 			"$SRCDIR/build" "$bdir" || dobuild=false
 		fi
 		
-		[ "$dobuild" = true ] && go build -o "$OFILE" "$SRCDIR" || echo "Compilation failed [$?]"
+		[ "$dobuild" = true ] && go build -o "$OFILE" "$SRCDIR" || exit $?
 	fi
 }
 
