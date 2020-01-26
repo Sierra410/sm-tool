@@ -28,9 +28,9 @@ func validateUuid(s string) bool {
 	return true
 }
 
-func newUuid4() string {
+func randomUuid() string {
 	return fmt.Sprintf(
-		"%08x-%04x-4%04x-%04x-%012x",
+		"%08x-%04x-4%03x-%04x-%012x",
 		rand.Uint64()%0xFFFFFFFF,
 		rand.Uint64()%0xFFFF,
 		rand.Uint64()%0xFFF,

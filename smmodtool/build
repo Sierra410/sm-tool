@@ -3,7 +3,10 @@
 printf 'package main
 
 var gladeMain = `%s`
-' "$(cat ./smmodtool/main.glade | sed 's/`/\\`/g')" > ./smmodtool/gladeMain.go
+' "$(cat ./smmodtool/main.glade |
+	sed -E 's/^\s+//g' |
+	sed -E 's/(^\s*|\s*$|\n)//g' |
+	sed 's/`/\\`/g')" > ./smmodtool/gladeMain.go
 
 if [ "$GOOS" = windows ]; then
 	CGO_ENABLED=1 \

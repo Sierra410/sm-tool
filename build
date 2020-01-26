@@ -30,7 +30,9 @@ build() {
 			"$SRCDIR/build" "$bdir" || dobuild=false
 		fi
 		
-		[ "$dobuild" = true ] && go build -o "$OFILE" "$SRCDIR" || exit $?
+		if [ "$dobuild" = true ]; then
+			go build -o "$OFILE" "$SRCDIR" || exit $?
+		fi
 	fi
 }
 

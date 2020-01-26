@@ -1,7 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.22.1 -->
+<!-- Generated with glade 3.22.1 
+
+Copyright (C) 
+
+This file is part of S410's SM Mod Tool.
+
+S410's SM Mod Tool is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+S410's SM Mod Tool is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with S410's SM Mod Tool.  If not, see <http://www.gnu.org/licenses/>.
+
+Author: Sierra410
+
+-->
 <interface>
   <requires lib="gtk+" version="3.20"/>
+  <!-- interface-license-type gplv3 -->
+  <!-- interface-name S410's SM Mod Tool -->
+  <!-- interface-authors Sierra410 -->
   <object class="GtkListStore" id="listStoreParts">
     <columns>
       <!-- column-name Parts -->
@@ -82,6 +106,30 @@
           <packing>
             <property name="pack_type">end</property>
             <property name="position">1</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkComboBoxText" id="comboBoxLanguage">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="active">2</property>
+            <items>
+              <item id="Brazilian" translatable="yes">Brazilian</item>
+              <item id="Chinese" translatable="yes">Chinese</item>
+              <item id="English" translatable="yes">English</item>
+              <item id="French" translatable="yes">French</item>
+              <item id="German" translatable="yes">German</item>
+              <item id="Italian" translatable="yes">Italian</item>
+              <item id="Japanese" translatable="yes">Japanese</item>
+              <item id="Korean" translatable="yes">Korean</item>
+              <item id="Polish" translatable="yes">Polish</item>
+              <item id="Russian" translatable="yes">Russian</item>
+              <item id="Spanish" translatable="yes">Spanish</item>
+            </items>
+          </object>
+          <packing>
+            <property name="pack_type">end</property>
+            <property name="position">2</property>
           </packing>
         </child>
       </object>
@@ -270,45 +318,6 @@
                                 <property name="position">1</property>
                               </packing>
                             </child>
-                            <child>
-                              <object class="GtkLabel">
-                                <property name="visible">True</property>
-                                <property name="can_focus">False</property>
-                                <property name="margin_left">5</property>
-                                <property name="margin_right">5</property>
-                                <property name="label" translatable="yes">Language</property>
-                              </object>
-                              <packing>
-                                <property name="expand">False</property>
-                                <property name="fill">True</property>
-                                <property name="position">2</property>
-                              </packing>
-                            </child>
-                            <child>
-                              <object class="GtkComboBoxText" id="comboBoxLanguage">
-                                <property name="visible">True</property>
-                                <property name="can_focus">False</property>
-                                <property name="active">2</property>
-                                <items>
-                                  <item id="Brazilian" translatable="yes">Brazilian</item>
-                                  <item id="Chinese" translatable="yes">Chinese</item>
-                                  <item id="English" translatable="yes">English</item>
-                                  <item id="French" translatable="yes">French</item>
-                                  <item id="German" translatable="yes">German</item>
-                                  <item id="Italian" translatable="yes">Italian</item>
-                                  <item id="Japanese" translatable="yes">Japanese</item>
-                                  <item id="Korean" translatable="yes">Korean</item>
-                                  <item id="Polish" translatable="yes">Polish</item>
-                                  <item id="Russian" translatable="yes">Russian</item>
-                                  <item id="Spanish" translatable="yes">Spanish</item>
-                                </items>
-                              </object>
-                              <packing>
-                                <property name="expand">False</property>
-                                <property name="fill">True</property>
-                                <property name="position">3</property>
-                              </packing>
-                            </child>
                           </object>
                           <packing>
                             <property name="expand">False</property>
@@ -395,18 +404,30 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkButton" id="buttonRandomUuid">
-                                <property name="label" translatable="yes">Random</property>
+                              <object class="GtkImage" id="imageUuidStatus">
                                 <property name="visible">True</property>
-                                <property name="can_focus">True</property>
-                                <property name="receives_default">True</property>
+                                <property name="can_focus">False</property>
                                 <property name="margin_left">5</property>
                                 <property name="margin_right">5</property>
+                                <property name="stock">gtk-no</property>
                               </object>
                               <packing>
                                 <property name="expand">False</property>
                                 <property name="fill">True</property>
                                 <property name="position">2</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="buttonRandomUuid">
+                                <property name="label" translatable="yes">Random</property>
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="receives_default">True</property>
+                              </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">3</property>
                               </packing>
                             </child>
                           </object>
