@@ -2,9 +2,11 @@ package main
 
 import (
 	"regexp"
+	"runtime"
 
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
+	"github.com/gotk3/gotk3/pango"
 )
 
 var (
@@ -27,15 +29,30 @@ func (self *part) setUuid(s string) {
 	self.smPart.Uuid = s
 }
 
-func (self *part) setTitle(s string, lang string) {
+func (self *part) setTitle(s string) {
 	self.labelName.SetText(s)
 	self.smPart.setTitle(s, currentLanguage)
 }
 
 func (self *part) destroy() {
+	delete(self.partList.parts, self)
+
 	self.listBoxRow.Destroy()
 
 	self.partList.removePart(self)
+	self.partList = nil
+	self.listBoxRow = nil
+	self.smPart = nil
+}
+
+func (self *part) reloadLables() {
+	self.labelName.SetText(
+		self.smPart.getTitle(currentLanguage),
+	)
+
+	self.labelUuid.SetText(
+		self.smPart.Uuid,
+	)
 }
 
 type partList struct {
@@ -51,8 +68,20 @@ type partList struct {
 }
 
 func (pl *partList) init() {
+	// It doesn't work otherwhise. For some reason.
+	pl.listBox.Connect("row-selected", func(self *gtk.ListBox, listBoxRow *gtk.ListBoxRow) {
+		listBoxRow.Activate()
+	})
+
+	pl.buttonDeletePart.Connect("clicked", func() {
+		if pl.activePart != nil {
+			pl.activePart.destroy()
+		}
+	})
+
 	pl.buttonAddPart.Connect("clicked", func() {
-		pl.createNewPart()
+		part := pl.createNewPart()
+		part.setUuid(randomUuid())
 	})
 
 	pl.searchEntryPart.Connect("search-changed", func(self *gtk.SearchEntry) {
@@ -61,10 +90,13 @@ func (pl *partList) init() {
 	})
 }
 
-func (self *partList) createNewPart() {
+func (self *partList) createNewPart() *part {
 	listBoxRow, _ := gtk.ListBoxRowNew()
 	labelName, _ := gtk.LabelNew("")
 	labelUuid, _ := gtk.LabelNew("")
+
+	labelUuid.SetEllipsize(pango.ELLIPSIZE_END)
+	labelName.SetEllipsize(pango.ELLIPSIZE_END)
 
 	box, _ := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
 	box.SetHomogeneous(true)
@@ -88,34 +120,41 @@ func (self *partList) createNewPart() {
 	part.listBoxRow.Connect("activate", func() {
 		self.partEditor.setEditorActive(true)
 		part.partList.setActivePart(part)
-		part.partList.partEditor.reloadValues()
+		part.partList.partEditor.reloadFields()
 	})
 
 	self.listBox.Add(part.listBoxRow)
 	part.listBoxRow.ShowAll()
+
+	return part
 }
 
 func (self *partList) removePart(p *part) {
-	p.listBoxRow.Destroy()
+	if self.activePart == p {
+		self.activePart = nil
+		self.partEditor.setEditorActive(false)
+	}
 
-	delete(self.parts, p)
+	_, ok := self.parts[p]
+	if ok {
+		p.destroy()
+
+		runtime.GC()
+	}
 }
 
 func (self *partList) filterVisible(s string) {
 	if s == "" {
-		for part, _ := range self.parts {
-			part.listBoxRow.SetVisible(true)
-		}
+		self.listBox.ShowAll()
 		return
 	}
 
 	r := regexp.MustCompile("(?i)" + regexp.QuoteMeta(s))
 
 	for part, _ := range self.parts {
-		part.listBoxRow.SetVisible(part.smPart.matches(r))
+		m := part.smPart.matches(r)
+		part.listBoxRow.SetVisible(m)
 	}
-
-	self.listBox.ShowAll()
 }
 
 func (self *partList) setActivePart(p *part) (ok bool) {
@@ -137,7 +176,7 @@ func (self *partList) setUuidOfActive(s string) {
 
 func (self *partList) setTitleOfActive(s string) {
 	if self.activePart != nil {
-		self.activePart.setTitle(s, currentLanguage)
+		self.activePart.setTitle(s)
 	}
 }
 
@@ -152,13 +191,15 @@ type partEditor struct {
 
 	stackPartData *gtk.Stack
 
-	entryName           *gtk.Entry
-	textViewDescription *gtk.TextView
+	entryName             *gtk.Entry
+	textViewDescription   *gtk.TextView
+	textBufferDescription *gtk.TextBuffer
 
-	entryUuid        *gtk.Entry
-	buttonRandomUuid *gtk.Button
-	imageUuidStatus  *gtk.Image
-	textViewPartData *gtk.TextView
+	entryUuid          *gtk.Entry
+	buttonRandomUuid   *gtk.Button
+	imageUuidStatus    *gtk.Image
+	textViewPartData   *gtk.TextView
+	textBufferPartData *gtk.TextBuffer
 
 	comboBoxLanguage *gtk.ComboBoxText
 }
@@ -170,14 +211,11 @@ func (pe *partEditor) init() {
 	})
 
 	pe.entryUuid.Connect("changed", func(self *gtk.Entry) {
-		text, err := self.GetText()
-		if err != nil {
-			logError(err)
-			return
-		}
+		text, _ := self.GetText()
 
 		if validateUuid(text) {
 			pe.imageUuidStatus.SetProperty("stock", "gtk-ok")
+			pe.partList.setUuidOfActive(text)
 		} else {
 			pe.imageUuidStatus.SetProperty("stock", "gtk-no")
 		}
@@ -191,17 +229,39 @@ func (pe *partEditor) init() {
 		lang := self.GetActiveID()
 		currentLanguage = lang
 
-		pe.reloadValues()
+		pe.reloadFields()
+
+		for p := range pe.partList.parts {
+			p.reloadLables()
+		}
+	})
+
+	pe.textBufferDescription.Connect("changed", func(self *gtk.TextBuffer) {
+		text, _ := self.GetText(
+			self.GetStartIter(),
+			self.GetEndIter(),
+			true,
+		)
+		pe.partList.setDescriptionOfActive(text)
+	})
+
+	pe.textBufferPartData.Connect("changed", func(self *gtk.TextBuffer) {
+		text, _ := self.GetText(
+			self.GetStartIter(),
+			self.GetEndIter(),
+			true,
+		)
+
+		pe.partList.activePart.smPart.PartData = text
 	})
 }
 
-func (self *partEditor) reloadValues() {
+func (self *partEditor) reloadFields() {
 	self.entryName.SetText(
 		self.partList.activePart.smPart.getTitle(currentLanguage),
 	)
 
-	tb, _ := self.textViewDescription.GetBuffer()
-	tb.SetText(
+	self.textBufferDescription.SetText(
 		self.partList.activePart.smPart.getDescription(currentLanguage),
 	)
 
@@ -209,8 +269,7 @@ func (self *partEditor) reloadValues() {
 		self.partList.activePart.smPart.Uuid,
 	)
 
-	tb, _ = self.textViewPartData.GetBuffer()
-	tb.SetText(
+	self.textBufferPartData.SetText(
 		self.partList.activePart.smPart.PartData,
 	)
 }
@@ -239,16 +298,24 @@ func gtkInit() {
 		return obj
 	}
 
+	textViewDescription := getObject("textViewDescription").(*gtk.TextView)
+	textBufferDescription, _ := textViewDescription.GetBuffer()
+
+	textViewPartData := getObject("textViewPartData").(*gtk.TextView)
+	textBufferPartData, _ := textViewPartData.GetBuffer()
+
 	pe := &partEditor{
 		stackPartData: getObject("stackPartData").(*gtk.Stack),
 
-		entryName:           getObject("entryName").(*gtk.Entry),
-		textViewDescription: getObject("textViewDescription").(*gtk.TextView),
+		entryName:             getObject("entryName").(*gtk.Entry),
+		textViewDescription:   textViewDescription,
+		textBufferDescription: textBufferDescription,
 
-		entryUuid:        getObject("entryUuid").(*gtk.Entry),
-		buttonRandomUuid: getObject("buttonRandomUuid").(*gtk.Button),
-		imageUuidStatus:  getObject("imageUuidStatus").(*gtk.Image),
-		textViewPartData: getObject("textViewPartData").(*gtk.TextView),
+		entryUuid:          getObject("entryUuid").(*gtk.Entry),
+		buttonRandomUuid:   getObject("buttonRandomUuid").(*gtk.Button),
+		imageUuidStatus:    getObject("imageUuidStatus").(*gtk.Image),
+		textViewPartData:   textViewPartData,
+		textBufferPartData: textBufferPartData,
 
 		comboBoxLanguage: getObject("comboBoxLanguage").(*gtk.ComboBoxText),
 	}
@@ -282,5 +349,6 @@ func gtkInit() {
 	})
 
 	windowMain.ShowAll()
+
 	gtk.Main()
 }

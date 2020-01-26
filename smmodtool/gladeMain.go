@@ -425,6 +425,8 @@ Author: Sierra410
 <property name="visible">True</property>
 <property name="can_focus">True</property>
 <property name="receives_default">True</property>
+<property name="margin_left">5</property>
+<property name="margin_right">5</property>
 </object>
 <packing>
 <property name="expand">False</property>
