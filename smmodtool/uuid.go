@@ -34,7 +34,7 @@ func randomUuid() string {
 		rand.Uint64()%0xFFFFFFFF,
 		rand.Uint64()%0xFFFF,
 		rand.Uint64()%0xFFF,
-		rand.Uint64()%0xFFFF,
+		rand.Uint64()%0xFFFF&0x3FFF|0x8000,
 		rand.Uint64()%0xFFFFFFFFFFFF,
 	)
 }

@@ -1,6 +1,10 @@
 package main
 
-import "regexp"
+import (
+	"regexp"
+
+	"github.com/hjson/hjson-go"
+)
 
 const (
 	languageBrazilian = "Brazilian"
@@ -23,35 +27,63 @@ type smPartDescription struct {
 }
 
 type smPart struct {
-	Uuid         string
-	Descriptions map[string]*smPartDescription
-	PartData     string
+	uuid         string
+	kind         string
+	descriptions map[string]*smPartDescription
+	partData     string
+	partDataJson map[string]interface{}
+}
+
+func smPartNew(uuid string) *smPart {
+	if !validateUuid(uuid) {
+		uuid = randomUuid()
+	}
+
+	return &smPart{
+		uuid:         uuid,
+		descriptions: map[string]*smPartDescription{},
+		partDataJson: map[string]interface{}{},
+	}
+}
+
+func (self *smPart) unmarshalPartData() error {
+	json := map[string]interface{}{}
+
+	err := hjson.Unmarshal([]byte(self.partData), &json)
+	if err != nil {
+		return err
+	}
+
+	json["uuid"] = self.uuid
+	self.partDataJson = json
+
+	return nil
 }
 
 func (self *smPart) setTitle(title, lang string) {
-	pd, ok := self.Descriptions[lang]
+	pd, ok := self.descriptions[lang]
 	if ok {
 		pd.Title = title
 	} else {
-		self.Descriptions[lang] = &smPartDescription{
+		self.descriptions[lang] = &smPartDescription{
 			Title: title,
 		}
 	}
 }
 
 func (self *smPart) setDescription(desc, lang string) {
-	pd, ok := self.Descriptions[lang]
+	pd, ok := self.descriptions[lang]
 	if ok {
 		pd.Description = desc
 	} else {
-		self.Descriptions[lang] = &smPartDescription{
+		self.descriptions[lang] = &smPartDescription{
 			Description: desc,
 		}
 	}
 }
 
 func (self *smPart) getTitle(lang string) string {
-	pd, ok := self.Descriptions[lang]
+	pd, ok := self.descriptions[lang]
 	if ok {
 		return pd.Title
 	}
@@ -60,7 +92,7 @@ func (self *smPart) getTitle(lang string) string {
 }
 
 func (self *smPart) getDescription(lang string) string {
-	pd, ok := self.Descriptions[lang]
+	pd, ok := self.descriptions[lang]
 	if ok {
 		return pd.Description
 	}
@@ -69,11 +101,11 @@ func (self *smPart) getDescription(lang string) string {
 }
 
 func (self *smPart) matches(r *regexp.Regexp) bool {
-	if r.MatchString(self.Uuid) {
+	if r.MatchString(self.uuid) {
 		return true
 	}
 
-	for _, desc := range self.Descriptions {
+	for _, desc := range self.descriptions {
 		if r.MatchString(desc.Title) {
 			return true
 		}

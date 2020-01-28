@@ -1,12 +1,17 @@
 #!/bin/bash
 
-printf 'package main
+fmt() {
+	sed -r 's/(^\s*|\s*$)//g; s/`/`+"`"+`/g' "$1" | tr -d '\n'
+}
 
-var gladeMain = `%s`
-' "$(cat ./smmodtool/main.glade |
-	sed -E 's/^\s+//g' |
-	sed -E 's/(^\s*|\s*$|\n)//g' |
-	sed 's/`/\\`/g')" > ./smmodtool/gladeMain.go
+format='package main
+
+var gladeMain=`%s`
+'
+
+printf "$format" \
+	"$(fmt ./smmodtool/resources/main.glade)" \
+	> ./smmodtool/resources.go
 
 if [ "$GOOS" = windows ]; then
 	CGO_ENABLED=1 \
