@@ -30,3 +30,19 @@ func dialogInfo(title, message string) {
 	messageDialog.Run()
 	messageDialog.Destroy()
 }
+
+func dialogDir(title string) string {
+	fcnd, _ := gtk.FileChooserNativeDialogNew(
+		title,
+		windowMain,
+		gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER,
+		"Select",
+		"Cancel",
+	)
+
+	if fcnd.Run() == int(gtk.RESPONSE_ACCEPT) {
+		return fcnd.GetFilename()
+	} else {
+		return ""
+	}
+}

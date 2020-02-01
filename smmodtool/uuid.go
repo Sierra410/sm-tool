@@ -5,6 +5,16 @@ import (
 	"math/rand"
 )
 
+// 0-7    309e1830
+// 8      -
+// 9-12   7865
+// 13     -
+// 14-17  421b
+// 18     -
+// 19-22  8886
+// 23     -
+// 24-35  c47f2ce0010e
+
 func validateUuid(s string) bool {
 	if len(s) != 36 {
 		return false
@@ -14,6 +24,16 @@ func validateUuid(s string) bool {
 		switch i {
 		case 8, 13, 18, 23:
 			if r != '-' {
+				return false
+			}
+		case 14:
+			if r != '4' {
+				return false
+			}
+		case 19:
+			switch r {
+			case '8', '9', 'a', 'A', 'b', 'B':
+			default:
 				return false
 			}
 		default:

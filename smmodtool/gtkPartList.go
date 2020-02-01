@@ -19,7 +19,7 @@ type partList struct {
 	buttonDeletePart *gtk.Button
 	searchEntryPart  *gtk.SearchEntry
 
-	parts      map[*part]struct{}
+	parts      []*part
 	activePart *part
 
 	partEditor *partEditor
@@ -30,16 +30,29 @@ func (pl *partList) init() {
 		dialogInfo("Sorry", "This function is not implemented yet.")
 	}
 
-	pl.buttonSortUp.SetOpacity(0.5)
-	pl.buttonSortDown.SetOpacity(0.5)
+	pl.buttonSave.SetOpacity(0.5)
 	pl.buttonCompile.SetOpacity(0.5)
 
-	pl.buttonSortUp.Connect("clicked", notImplemented)
-	pl.buttonSortDown.Connect("clicked", notImplemented)
+	pl.buttonSortUp.Connect("clicked", func() {
+		if pl.activePart != nil && pl.activePart.index != 0 {
+			pl.swapParts(pl.activePart.index-1, pl.activePart.index)
+		}
+	})
+
+	pl.buttonSortDown.Connect("clicked", func() {
+		if pl.activePart != nil && pl.activePart.index != (len(pl.parts)-1) {
+			pl.swapParts(pl.activePart.index+1, pl.activePart.index)
+		}
+	})
+
 	pl.buttonCompile.Connect("clicked", notImplemented)
 
 	pl.buttonSave.Connect("clicked", notImplemented)
-	pl.buttonLoad.Connect("clicked", notImplemented)
+
+	pl.buttonLoad.Connect("clicked", func() {
+		dir := dialogDir("Select mod directory")
+		pl.loadMod(dir)
+	})
 
 	// It doesn't work otherwise. For some reason.
 	pl.listBox.Connect("row-selected", func(self *gtk.ListBox, listBoxRow *gtk.ListBoxRow) {
@@ -53,7 +66,7 @@ func (pl *partList) init() {
 	})
 
 	pl.buttonAddPart.Connect("clicked", func() {
-		part := pl.createNewPart(smPartNew(""))
+		part := pl.createNewPart(smPartNew("New part", ""))
 		part.setUuid(randomUuid())
 	})
 
@@ -63,8 +76,56 @@ func (pl *partList) init() {
 	})
 }
 
+func (self *partList) loadMod(dir string) {
+	if dir == "" {
+		return
+	}
+
+	logger.println("Loading:", dir)
+
+	md := &modDirectory{}
+	err := md.setDir(dir)
+	if err != nil {
+		logger.printlnImportant(err)
+		return
+	}
+
+	parts := md.loadParts()
+	logger.printf("Loaded %d parts", len(parts))
+
+	self.clear()
+	for _, p := range parts {
+		self.createNewPart(p)
+	}
+
+	self.reloadLables()
+}
+
+func (self *partList) reloadLables() {
+	for _, p := range self.parts {
+		p.reloadLables()
+	}
+}
+
+func (self *partList) swapParts(a, b int) {
+	partA := self.parts[a]
+	partB := self.parts[b]
+
+	self.parts[b] = partA
+	partA.index = b
+
+	self.parts[a] = partB
+	partB.index = a
+
+	self.listBox.Remove(partA.listBoxRow)
+	self.listBox.Insert(partA.listBoxRow, partA.index)
+
+	self.listBox.Remove(partB.listBoxRow)
+	self.listBox.Insert(partB.listBoxRow, partB.index)
+}
+
 func (self *partList) clear() {
-	for p := range self.parts {
+	for _, p := range self.parts {
 		p.destroy()
 	}
 }
@@ -98,7 +159,7 @@ func (self *partList) createNewPart(smp *smPart) *part {
 		part.partList.partEditor.reloadFields()
 	})
 
-	self.parts[part] = struct{}{}
+	self.pushPart(part)
 
 	self.listBox.Add(part.listBoxRow)
 	part.listBoxRow.ShowAll()
@@ -106,16 +167,13 @@ func (self *partList) createNewPart(smp *smPart) *part {
 	return part
 }
 
-func (self *partList) removePart(p *part) {
-	if self.activePart == p {
-		self.activePart = nil
-		self.partEditor.setEditorActive(false)
-	}
+func (self *partList) pushPart(p *part) {
+	p.index = len(self.parts)
+	self.parts = append(self.parts, p)
+}
 
-	_, ok := self.parts[p]
-	if ok {
-		p.destroy()
-	}
+func (self *partList) isPartInList(p *part) bool {
+	return p.index < len(self.parts) && self.parts[p.index] == p
 }
 
 func (self *partList) filterVisible(s string) {
@@ -126,21 +184,18 @@ func (self *partList) filterVisible(s string) {
 
 	r := regexp.MustCompile("(?i)" + regexp.QuoteMeta(s))
 
-	for part, _ := range self.parts {
+	for _, part := range self.parts {
 		m := part.smPart.matches(r)
 		part.listBoxRow.SetVisible(m)
 	}
 }
 
-func (self *partList) setActivePart(p *part) (ok bool) {
-	_, ok = self.parts[p]
-	if !ok {
+func (self *partList) setActivePart(p *part) {
+	if !self.isPartInList(p) {
 		return
 	}
 
 	self.activePart = p
-
-	return
 }
 
 func (self *partList) setUuidOfActive(s string) {
@@ -158,5 +213,11 @@ func (self *partList) setTitleOfActive(s string) {
 func (self *partList) setDescriptionOfActive(s string) {
 	if self.activePart != nil {
 		self.activePart.smPart.setDescription(s, currentLanguage)
+	}
+}
+
+func (self *partList) setKindOfActive(b bool) {
+	if self.activePart != nil {
+		self.activePart.smPart.kind = b
 	}
 }

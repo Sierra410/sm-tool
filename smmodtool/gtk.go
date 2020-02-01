@@ -6,14 +6,14 @@ import (
 )
 
 var (
-	windowMain *gtk.Window
-
-	logger *gtkLogger
+	windowMain   *gtk.Window
+	mainPartList *partList
+	logger       *gtkLogger
 
 	currentLanguage = languageEnglish
 )
 
-func gtkInit() chan bool {
+func gtkInit(onReady func()) chan bool {
 	gtk.Init(nil)
 
 	mainBuilder, _ := gtk.BuilderNew()
@@ -35,6 +35,7 @@ func gtkInit() chan bool {
 
 		entryUuid:           getObject("entryUuid").(*gtk.Entry),
 		buttonRandomUuid:    getObject("buttonRandomUuid").(*gtk.Button),
+		checkButtonIsBlock:  getObject("checkButtonIsBlock").(*gtk.CheckButton),
 		labelUuidStatus:     getObject("labelUuidStatus").(*gtk.Label),
 		textBufferPartData:  getObject("textBufferPartData").(*gtk.TextBuffer),
 		textBufferJsonError: getObject("textBufferJsonError").(*gtk.TextBuffer),
@@ -54,7 +55,7 @@ func gtkInit() chan bool {
 		buttonDeletePart: getObject("buttonDeletePart").(*gtk.Button),
 		searchEntryPart:  getObject("searchEntryPart").(*gtk.SearchEntry),
 
-		parts:      map[*part]struct{}{},
+		parts:      []*part{},
 		partEditor: pe,
 	}
 
@@ -62,6 +63,8 @@ func gtkInit() chan bool {
 
 	pe.init()
 	pl.init()
+
+	mainPartList = pl
 
 	// Log stuff
 
@@ -81,10 +84,16 @@ func gtkInit() chan bool {
 	windowMain.ShowAll()
 
 	chanFinished := make(chan bool, 1)
+
+	gtk.MainIterationDo(true)
+
+	onReady()
+
 	go func() {
 		gtk.Main()
 
 		chanFinished <- true
 	}()
+
 	return chanFinished
 }

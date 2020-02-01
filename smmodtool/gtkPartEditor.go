@@ -24,8 +24,9 @@ type partEditor struct {
 	entryName             *gtk.Entry
 	textBufferDescription *gtk.TextBuffer
 	// Page 2
-	entryUuid        *gtk.Entry
-	buttonRandomUuid *gtk.Button
+	entryUuid          *gtk.Entry
+	buttonRandomUuid   *gtk.Button
+	checkButtonIsBlock *gtk.CheckButton
 
 	labelUuidStatus *gtk.Label
 
@@ -57,13 +58,18 @@ func (pe *partEditor) init() {
 		pe.entryUuid.SetText(randomUuid())
 	})
 
+	pe.checkButtonIsBlock.Connect("toggled", func(self *gtk.CheckButton) {
+		p, _ := self.GetProperty("active")
+		pe.partList.setKindOfActive(p.(bool))
+	})
+
 	pe.comboBoxLanguage.Connect("changed", func(self *gtk.ComboBoxText) {
 		lang := self.GetActiveID()
 		currentLanguage = lang
 
 		pe.reloadFields()
 
-		for p := range pe.partList.parts {
+		for _, p := range pe.partList.parts {
 			p.reloadLables()
 		}
 	})
@@ -110,6 +116,11 @@ func (self *partEditor) reloadFields() {
 
 	self.textBufferPartData.SetText(
 		self.partList.activePart.smPart.partData,
+	)
+
+	self.checkButtonIsBlock.SetProperty(
+		"active",
+		self.partList.activePart.smPart.kind,
 	)
 }
 

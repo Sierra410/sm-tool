@@ -2,9 +2,27 @@ package main
 
 import (
 	"regexp"
+	"strings"
 
 	"github.com/hjson/hjson-go"
 )
+
+const (
+	kindBlockList = "blockList"
+	kindPartList  = "partList"
+)
+
+func getPartKindString(isBlock bool) string {
+	if isBlock {
+		return kindBlockList
+	}
+
+	return kindPartList
+}
+
+func getPartKind(s string) bool {
+	return s == kindBlockList
+}
 
 const (
 	languageBrazilian = "Brazilian"
@@ -20,6 +38,20 @@ const (
 	languageSpanish   = "Spanish"
 )
 
+var languages = []string{
+	languageBrazilian,
+	languageChinese,
+	languageEnglish,
+	languageFrench,
+	languageGerman,
+	languageItalian,
+	languageJapanese,
+	languageKorean,
+	languagePolish,
+	languageRussian,
+	languageSpanish,
+}
+
 type smPartDescription struct {
 	Title       string   `json:"title"`
 	Description string   `json:"description"`
@@ -28,13 +60,13 @@ type smPartDescription struct {
 
 type smPart struct {
 	uuid         string
-	kind         string
+	kind         bool
 	descriptions map[string]*smPartDescription
 	partData     string
 	partDataJson map[string]interface{}
 }
 
-func smPartNew(uuid string) *smPart {
+func smPartNew(title, uuid string) *smPart {
 	if !validateUuid(uuid) {
 		uuid = randomUuid()
 	}
@@ -58,6 +90,16 @@ func (self *smPart) unmarshalPartData() error {
 	self.partDataJson = json
 
 	return nil
+}
+
+func (self *smPart) setUuid(uuid string) bool {
+	if !validateUuid(uuid) {
+		return false
+	}
+
+	self.uuid = strings.ToLower(uuid)
+
+	return true
 }
 
 func (self *smPart) setTitle(title, lang string) {

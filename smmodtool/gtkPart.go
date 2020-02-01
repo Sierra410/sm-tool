@@ -12,8 +12,9 @@ type part struct {
 }
 
 func (self *part) setUuid(s string) {
-	self.labelUuid.SetText(s)
-	self.smPart.uuid = s
+	if self.smPart.setUuid(s) {
+		self.reloadLables()
+	}
 }
 
 func (self *part) setTitle(s string) {
@@ -22,11 +23,17 @@ func (self *part) setTitle(s string) {
 }
 
 func (self *part) destroy() {
-	delete(self.partList.parts, self)
+	for _, x := range self.partList.parts[self.index+1:] {
+		x.index = x.index - 1
+	}
+
+	self.partList.parts = append(
+		self.partList.parts[:self.index],
+		self.partList.parts[self.index+1:]...,
+	)
 
 	self.listBoxRow.Destroy()
 
-	self.partList.removePart(self)
 	self.partList = nil
 	self.listBoxRow = nil
 	self.smPart = nil
