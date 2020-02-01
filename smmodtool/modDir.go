@@ -12,9 +12,14 @@ import (
 	"github.com/hjson/hjson-go"
 )
 
+const (
+	defaultFileMode = 0644
+	defaultDirMode  = 0755
+)
+
 var (
-	inventoryDescriptionsJson = "inventoryDescriptions.json"
-	shapeSets                 = "shapeSets.json"
+	inventoryDescriptionFilename = "inventoryDescriptions.json"
+	shapeSetsFilename            = "shapeSets.json"
 )
 
 type modDirectory struct {
@@ -38,25 +43,24 @@ func (self modDirectory) loadParts() []*smPart {
 		}
 	}()
 
+	logError := func(p string, err error) {
+		logger.printfImportant("Error loading %s:\n%s\nSkipping...\n", p, err.Error())
+	}
+
 	ps := make([]*smPart, 0, 128)
 
 	// ShapeSets
-	dir := self.getShapeSetsDir()
-	fileInfo, err := ioutil.ReadDir(dir)
+	jsonFiles, err := findJsonFiles(self.getShapeSetsDir())
 	if err != nil {
 		panic(err)
 	}
 
-	for _, fi := range fileInfo {
-		if fi.IsDir() {
-			continue
-		}
-
+	for _, jsonFile := range jsonFiles {
 		j := map[string]interface{}{}
 
-		jsonFile := path.Join(dir, fi.Name())
 		err := jsonLoadFile(jsonFile, &j)
 		if err != nil {
+			logError(jsonFile, err)
 			continue
 		}
 
@@ -78,22 +82,19 @@ func (self modDirectory) loadParts() []*smPart {
 
 	// Description
 	for _, lang := range languages {
-		dir := self.getInventoryDescriptionDir(lang)
-		fileInfo, err := ioutil.ReadDir(dir)
+		langDir := self.getInventoryDescriptionDir(lang)
+		jsonFiles, err := findJsonFiles(langDir)
 		if err != nil {
+			logger.printf("Error reading %s\nSkipping...\n", langDir)
 			continue
 		}
 
-		for _, fi := range fileInfo {
-			if fi.IsDir() {
-				continue
-			}
-
+		for _, jsonFile := range jsonFiles {
 			descs := map[string]interface{}{}
 
-			jsonFile := path.Join(dir, fi.Name())
 			err := jsonLoadFile(jsonFile, &descs)
 			if err != nil {
+				logError(jsonFile, err)
 				continue
 			}
 
@@ -146,6 +147,112 @@ func (self modDirectory) loadParts() []*smPart {
 	return ps
 }
 
+func (self modDirectory) saveParts(parts []*part) error {
+	descs := map[string]map[string]*smPartDescription{}
+	for _, lang := range languages {
+		descs[lang] = map[string]*smPartDescription{}
+	}
+
+	blockList := []interface{}{}
+	partList := []interface{}{}
+
+	// Convert to more sm-ish format
+	for _, x := range parts {
+		part := x.smPart
+
+		err := part.unmarshalPartData()
+		if err != nil {
+			logger.printlnImportant(part.uuid, "json error:\n", err.Error())
+			return err
+		}
+
+		shallowCopy := map[string]interface{}{}
+		for k, v := range part.partDataJson {
+			shallowCopy[k] = v
+		}
+
+		shallowCopy["uuid"] = part.uuid
+
+		for lang, desc := range part.descriptions {
+			if desc.Keywords == nil {
+				desc.Keywords = []string{}
+			}
+
+			descs[lang][part.uuid] = desc
+		}
+
+		if part.kind {
+			blockList = append(blockList, shallowCopy)
+		} else {
+			partList = append(partList, shallowCopy)
+		}
+	}
+
+	// Marshall
+	shapeSets, err := json.MarshalIndent(
+		map[string]interface{}{
+			"blockList": blockList,
+			"partList":  partList,
+		},
+		"",
+		"\t",
+	)
+	if err != nil {
+		return err
+	}
+
+	inventoryDescriptions := map[string][]byte{}
+	for lang, desc := range descs {
+		b, err := json.MarshalIndent(desc, "", "\t")
+		if err != nil {
+			return err
+		}
+
+		inventoryDescriptions[lang] = b
+	}
+
+	shapeSetsDir := self.getShapeSetsDir()
+
+	// All gud if we got here, delete old stuff
+	jsons, err := findJsonFiles(shapeSetsDir)
+	if err == nil {
+		for _, jf := range jsons {
+			os.Remove(jf)
+		}
+	}
+
+	for _, lang := range languages {
+		jsons, err := findJsonFiles(self.getInventoryDescriptionDir(lang))
+		if err != nil {
+			continue
+		}
+
+		for _, jf := range jsons {
+			os.Remove(jf)
+		}
+	}
+
+	//...and write new one
+	os.MkdirAll(shapeSetsDir, defaultDirMode)
+	ioutil.WriteFile(
+		path.Join(shapeSetsDir, shapeSetsFilename),
+		shapeSets,
+		defaultFileMode,
+	)
+
+	for lang, desc := range inventoryDescriptions {
+		descDir := self.getInventoryDescriptionDir(lang)
+		os.MkdirAll(descDir, defaultDirMode)
+		ioutil.WriteFile(
+			path.Join(descDir, inventoryDescriptionFilename),
+			desc,
+			defaultFileMode,
+		)
+	}
+
+	return nil
+}
+
 func (self modDirectory) getInventoryDescriptionDir(lang string) string {
 	return path.Join(self.path, "Gui", "Language", lang)
 }
@@ -154,11 +261,30 @@ func (self modDirectory) getShapeSetsDir() string {
 	return path.Join(self.path, "Objects", "Database", "ShapeSets")
 }
 
-func jsonLoadFile(p string, j interface{}) error {
-	if !strings.EqualFold(filepath.Ext(p), ".json") {
-		return errors.New("Not .json")
+func findJsonFiles(dir string) ([]string, error) {
+	files := []string{}
+
+	fileInfo, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, err
 	}
 
+	for _, fi := range fileInfo {
+		if fi.IsDir() {
+			continue
+		}
+
+		if !strings.EqualFold(filepath.Ext(fi.Name()), ".json") {
+			continue
+		}
+
+		files = append(files, path.Join(dir, fi.Name()))
+	}
+
+	return files, nil
+}
+
+func jsonLoadFile(p string, j interface{}) error {
 	b, err := ioutil.ReadFile(p)
 	if err != nil {
 		return err

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"os/exec"
 	"regexp"
+	"runtime"
 
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/gotk3/gotk3/pango"
@@ -23,14 +25,11 @@ type partList struct {
 	activePart *part
 
 	partEditor *partEditor
+
+	modDir modDirectory
 }
 
 func (pl *partList) init() {
-	notImplemented := func() {
-		dialogInfo("Sorry", "This function is not implemented yet.")
-	}
-
-	pl.buttonSave.SetOpacity(0.5)
 	pl.buttonCompile.SetOpacity(0.5)
 
 	pl.buttonSortUp.Connect("clicked", func() {
@@ -45,9 +44,65 @@ func (pl *partList) init() {
 		}
 	})
 
-	pl.buttonCompile.Connect("clicked", notImplemented)
+	pl.buttonCompile.Connect("clicked", func() func() {
+		c := 0
 
-	pl.buttonSave.Connect("clicked", notImplemented)
+		return func() {
+			switch c {
+			case 0:
+				dialogInfo("Sorry", "This function is not implemented yet.")
+			case 1:
+				dialogInfo("Sorry", "This function is not implemented.")
+			case 2:
+				dialogInfo("Sorry", "This function is still not implemented.")
+			case 3:
+				dialogInfo("Sorry", "This function is STILL not implemented!")
+			case 4:
+				dialogInfo("-_-", "No. STILL not implemented.")
+			case 5:
+				dialogInfo("-_-", "STILL not implemented.")
+			case 6:
+				dialogInfo("Seriously?", "Nope.")
+			case 7:
+				dialogInfo("...", "You DO realize that's not how it works right?.")
+			case 8:
+				dialogInfo("...", "...")
+			case 9:
+				dialogInfo("...", "Stop it. You know, I'm a program. I can do a lot of stuff. I could install viruses on your computer.")
+			case 10:
+				dialogInfo("...", "...")
+			case 11:
+				dialogInfo("...", "Do you really want me to do this?")
+			case 12:
+				dialogInfo("...", "...")
+			case 13:
+				url := "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+
+				switch runtime.GOOS {
+				case "linux":
+					exec.Command("xdg-open", url).Start()
+				case "windows":
+					exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+				case "darwin":
+					exec.Command("open", url).Start()
+				}
+
+				pl.buttonCompile.Hide()
+			}
+
+			c++
+		}
+	}())
+
+	pl.buttonSave.Connect("clicked", func() {
+		err := pl.modDir.saveParts(pl.parts)
+		if err != nil {
+			logger.printlnImportant(err)
+			return
+		}
+
+		dialogInfo("Saved", "Saved")
+	})
 
 	pl.buttonLoad.Connect("clicked", func() {
 		dir := dialogDir("Select mod directory")
@@ -83,15 +138,15 @@ func (self *partList) loadMod(dir string) {
 
 	logger.println("Loading:", dir)
 
-	md := &modDirectory{}
-	err := md.setDir(dir)
+	self.modDir = modDirectory{}
+	err := self.modDir.setDir(dir)
 	if err != nil {
 		logger.printlnImportant(err)
 		return
 	}
 
-	parts := md.loadParts()
-	logger.printf("Loaded %d parts", len(parts))
+	parts := self.modDir.loadParts()
+	logger.printf("Loaded %d parts\n", len(parts))
 
 	self.clear()
 	for _, p := range parts {
@@ -126,8 +181,14 @@ func (self *partList) swapParts(a, b int) {
 
 func (self *partList) clear() {
 	for _, p := range self.parts {
-		p.destroy()
+		p.listBoxRow.Destroy()
+
+		p.partList = nil
+		p.listBoxRow = nil
+		p.smPart = nil
 	}
+
+	self.parts = []*part{}
 }
 
 func (self *partList) createNewPart(smp *smPart) *part {

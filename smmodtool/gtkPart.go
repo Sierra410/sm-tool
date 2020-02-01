@@ -44,7 +44,7 @@ func (self *part) reloadLables() {
 		self.smPart.getTitle(currentLanguage),
 	)
 
-	self.labelUuid.SetText(
-		self.smPart.uuid,
+	self.labelUuid.SetMarkup(
+		"<span font_desc=\"mono\">" + self.smPart.uuid + "</span>",
 	)
 }
