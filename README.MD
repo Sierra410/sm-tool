@@ -1,4 +1,10 @@
-Scrap Mechanic Texture Compiler
+# Mod Tool
+
+BETA! Back up your mods before using it!
+
+Can be used to edit part and block titles, descriptions, UUIDs and data
+
+# Texture Compiler
 
 Usage: ./smtcmp [DIR]...
 
