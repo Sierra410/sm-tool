@@ -115,6 +115,7 @@ func (pl *partList) init() {
 	pl.buttonLoad.Connect("clicked", func() {
 		dir := dialogDir("Select mod directory")
 		pl.loadMod(dir)
+
 	})
 
 	// It doesn't work otherwise. For some reason.
@@ -125,6 +126,8 @@ func (pl *partList) init() {
 	pl.buttonDeletePart.Connect("clicked", func() {
 		if pl.activePart != nil && dialogYesNo("Delete?", "Do you not want to not delete this part?") {
 			pl.activePart.destroy()
+			pl.partEditor.setEditorActive(false)
+			pl.activePart = nil
 		}
 	})
 
@@ -161,6 +164,7 @@ func (self *partList) loadMod(dir string) {
 		self.createNewPart(p)
 	}
 
+	self.partEditor.setEditorActive(false)
 	self.reloadLables()
 }
 

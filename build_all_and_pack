@@ -1,0 +1,5 @@
+#!/bin/bash
+
+R=true ./build
+GOOS=windows R=true ./build
+./windows_bundle/pack
