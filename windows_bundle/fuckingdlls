@@ -1,0 +1,10 @@
+#!/bin/bash
+
+while true; do
+    errs="$(wine ./smmodtool/bin/smmodtool.exe 2>&1)"
+    [ $? = 0 ] && break
+    files=$(echo "$errs" | sed -r 's/[0-9a-fA-F]+:err:module:import_dll Library (.*) \(which.*/\1/g; s/.*:module:LdrInitializeThunk.*//g' | sort -u)
+    for x in $files; do
+        cp -n /usr/x86_64-w64-mingw32/bin/$x ./$x
+    done
+done

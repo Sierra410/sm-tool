@@ -14,16 +14,18 @@ BACK UP YOUR SHIT to prevent data loss.`
 func main() {
 	rand.Seed(time.Now().Unix())
 
-	if runtime.GOOS == "windows" {
-		os.Setenv("GTK_THEME", "win32")
-	}
-
 	var (
 		loadMod = ""
 	)
 
 	flag.StringVar(&loadMod, "load", loadMod, "path to a mod directory")
 	flag.Parse()
+
+	if runtime.GOOS == "windows" {
+		if os.Getenv("GTK_THEME") == "" {
+			os.Setenv("GTK_THEME", "Matcha-sea")
+		}
+	}
 
 	finished := gtkInit(func() {
 		logger.printlnImportant(betaWarning)

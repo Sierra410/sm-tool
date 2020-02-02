@@ -95,6 +95,14 @@ func (pl *partList) init() {
 	}())
 
 	pl.buttonSave.Connect("clicked", func() {
+		if pl.modDir.path == "" {
+			pl.modDir.path = dialogDir("Select mod directory")
+		}
+
+		if pl.modDir.path == "" {
+			return
+		}
+
 		err := pl.modDir.saveParts(pl.parts)
 		if err != nil {
 			logger.printlnImportant(err)

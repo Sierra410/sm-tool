@@ -1,0 +1,11 @@
+#!/bin/bash
+
+cd ./windows_bundle
+
+d='smmodtool'
+f='smmodtool.zip'
+
+cp ./bin/release/windows/*.exe "$d/bin"
+
+rm -f "$f"
+zip -r -9 "$f" "$d"

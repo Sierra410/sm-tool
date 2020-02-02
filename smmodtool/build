@@ -9,15 +9,21 @@ format='package main
 var gladeMain=`%s`
 '
 
+[ -z "$KEEPCONSOLE" ] && hflag="-H=windowsgui"
+
 printf "$format" \
 	"$(fmt ./smmodtool/resources/main.glade)" \
 	> ./smmodtool/resources.go
 
 if [ "$GOOS" = windows ]; then
+	CGO_CFLAGS_ALLOW=".*" \
+	CGO_LDFLAGS_ALLOW=".*" \
+	PKG_CONFIG_PATH=/usr/x86_64-w64-mingw32/lib/pkgconfig \
+	CC=x86_64-w64-mingw32-gcc \
 	CGO_ENABLED=1 \
-	CC=x86_64-w64-mingw32-cc \
+	GOOS=windows \
 	GOARCH=amd64 \
-	go build -ldflags '-H=windowsgui' -o "$OFILE" "$SRCDIR"
-	
+	go build -v -tags gtk_3_24 -gcflags "-N -l" -ldflags "-s -w $hflag" -o "$OFILE" "$SRCDIR"
+		
 	exit 1 # don't build with main script
 fi

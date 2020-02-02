@@ -116,9 +116,9 @@
       <object class="GtkBox">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
+        <property name="spacing">5</property>
         <child>
           <object class="GtkBox">
-            <property name="width_request">320</property>
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="orientation">vertical</property>
