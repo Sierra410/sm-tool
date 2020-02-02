@@ -1,8 +1,20 @@
-# Mod Tool
+## Download
+[Latest release](https://github.com/Sierra410/sm-tool/releases)
 
-BETA! Back up your mods before using it!
+# Part Manager
 
-Can be used to edit part and block titles, descriptions, UUIDs and data
+**BETA! Back up your mods before using it!**
+
+Features:
+- Description and title editor (supports all languages)
+- Parts can be rearranged
+- Can generate/edit part UUID + validate it
+- Simple json (hjson) editor with error info
+
+Mod directory can be passed as an argument:  
+```smmodtool.exe -load=/path/to/my/mod```
+
+![Screenshot](https://raw.githubusercontent.com/Sierra410/sm-tool/master/screenshot.png)
 
 # Texture Compiler
 
