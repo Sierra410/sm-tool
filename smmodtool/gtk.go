@@ -9,8 +9,6 @@ var (
 	windowMain   *gtk.Window
 	mainPartList *partList
 	logger       *gtkLogger
-
-	currentLanguage = languageEnglish
 )
 
 func gtkInit(onReady func()) chan bool {

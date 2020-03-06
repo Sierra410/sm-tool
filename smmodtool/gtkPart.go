@@ -1,14 +1,51 @@
 package main
 
-import "github.com/gotk3/gotk3/gtk"
+import (
+	"github.com/gotk3/gotk3/gtk"
+	"github.com/gotk3/gotk3/pango"
+)
 
 type part struct {
-	partList   *partList
+	partList *partList
+	index    int
+
 	listBoxRow *gtk.ListBoxRow
 	labelName  *gtk.Label
 	labelUuid  *gtk.Label
-	smPart     *smPart
-	index      int
+
+	smPart *smPart
+}
+
+func newPart(smp *smPart) *part {
+	// Building gtk.ListBoxRow
+	box, _ := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
+	box.SetHomogeneous(true)
+
+	labelName, _ := gtk.LabelNew("")
+	labelName.SetEllipsize(pango.ELLIPSIZE_END)
+	box.Container.Add(labelName)
+
+	labelUuid, _ := gtk.LabelNew("")
+	box.Container.Add(labelUuid)
+
+	listBoxRow, _ := gtk.ListBoxRowNew()
+	listBoxRow.Add(box)
+	listBoxRow.SetName("")
+
+	p := &part{
+		listBoxRow: listBoxRow,
+		labelName:  labelName,
+		labelUuid:  labelUuid,
+		smPart:     smp,
+	}
+
+	listBoxRow.Connect("activate", func() {
+		p.partList.partEditor.setEditorActive(true)
+		p.partList.setActivePart(p)
+		p.partList.partEditor.reloadFields()
+	})
+
+	return p
 }
 
 func (self *part) setUuid(s string) {

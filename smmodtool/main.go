@@ -37,3 +37,16 @@ func main() {
 
 	<-finished
 }
+
+func mapDeepcopy(from, to map[string]interface{}) {
+	for k, v := range from {
+		switch v.(type) {
+		case map[string]interface{}:
+			m := map[string]interface{}{}
+			mapDeepcopy(v.(map[string]interface{}), m)
+			to[k] = m
+		default:
+			to[k] = v
+		}
+	}
+}

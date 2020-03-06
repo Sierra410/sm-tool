@@ -1,6 +1,9 @@
 package main
 
 import (
+	"os/exec"
+	"runtime"
+
 	"github.com/gotk3/gotk3/gtk"
 )
 
@@ -44,5 +47,16 @@ func dialogDir(title string) string {
 		return fcnd.GetFilename()
 	} else {
 		return ""
+	}
+}
+
+func openUrl(url string) {
+	switch runtime.GOOS {
+	case "linux":
+		exec.Command("xdg-open", url).Start()
+	case "windows":
+		exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+	case "darwin":
+		exec.Command("open", url).Start()
 	}
 }

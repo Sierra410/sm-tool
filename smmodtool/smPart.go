@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"regexp"
 	"strings"
 
@@ -24,34 +25,6 @@ func getPartKind(s string) bool {
 	return s == kindBlockList
 }
 
-const (
-	languageBrazilian = "Brazilian"
-	languageChinese   = "Chinese"
-	languageEnglish   = "English"
-	languageFrench    = "French"
-	languageGerman    = "German"
-	languageItalian   = "Italian"
-	languageJapanese  = "Japanese"
-	languageKorean    = "Korean"
-	languagePolish    = "Polish"
-	languageRussian   = "Russian"
-	languageSpanish   = "Spanish"
-)
-
-var languages = []string{
-	languageBrazilian,
-	languageChinese,
-	languageEnglish,
-	languageFrench,
-	languageGerman,
-	languageItalian,
-	languageJapanese,
-	languageKorean,
-	languagePolish,
-	languageRussian,
-	languageSpanish,
-}
-
 type smPartDescription struct {
 	Title       string   `json:"title"`
 	Description string   `json:"description"`
@@ -59,11 +32,12 @@ type smPartDescription struct {
 }
 
 type smPart struct {
-	uuid         string
-	kind         bool
-	descriptions map[string]*smPartDescription
-	partData     string
-	partDataJson map[string]interface{}
+	uuid           string
+	kind           bool
+	descriptions   map[string]*smPartDescription
+	partData       map[string]interface{}
+	partDataJson   string
+	unmarshalError error
 }
 
 func smPartNew(title, uuid string) *smPart {
@@ -74,20 +48,36 @@ func smPartNew(title, uuid string) *smPart {
 	return &smPart{
 		uuid:         uuid,
 		descriptions: map[string]*smPartDescription{},
-		partDataJson: map[string]interface{}{},
+		partData:     map[string]interface{}{},
 	}
 }
 
-func (self *smPart) unmarshalPartData() error {
-	json := map[string]interface{}{}
+func (self *smPart) marshalPartData() error {
+	m := map[string]interface{}{}
+	mapDeepcopy(self.partData, m)
+	delete(m, "uuid")
 
-	err := hjson.Unmarshal([]byte(self.partData), &json)
+	b, err := json.MarshalIndent(m, "", "\t")
 	if err != nil {
 		return err
 	}
 
-	json["uuid"] = self.uuid
-	self.partDataJson = json
+	self.partDataJson = string(b)
+
+	return nil
+}
+
+func (self *smPart) unmarshalPartData() error {
+	m := map[string]interface{}{}
+
+	err := hjson.Unmarshal([]byte(self.partDataJson), &m)
+	self.unmarshalError = err
+	if err != nil {
+		return err
+	}
+
+	m["uuid"] = self.uuid
+	self.partData = m
 
 	return nil
 }

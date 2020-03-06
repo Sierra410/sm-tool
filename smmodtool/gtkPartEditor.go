@@ -1,10 +1,31 @@
 package main
 
-import "github.com/gotk3/gotk3/gtk"
+import (
+	"github.com/gotk3/gotk3/gtk"
+)
 
 const (
-	statusOk  = `• c •`
-	statusErr = `OらO`
+	statusOk  = "Ok"  // `• c •`
+	statusErr = "Err" // `OらO`
+)
+
+var (
+	// This list is used as both names of directories for SM
+	// and as language names.
+	languages = []string{
+		"Brazilian",
+		"Chinese",
+		"English",
+		"French",
+		"German",
+		"Italian",
+		"Japanese",
+		"Korean",
+		"Polish",
+		"Russian",
+		"Spanish",
+	}
+	currentLanguage = languages[2]
 )
 
 func getStatusString(b bool) string {
@@ -63,6 +84,11 @@ func (pe *partEditor) init() {
 		pe.partList.setKindOfActive(p.(bool))
 	})
 
+	for _, l := range languages {
+		pe.comboBoxLanguage.Append(l, l)
+	}
+	pe.comboBoxLanguage.SetActiveID(currentLanguage)
+
 	pe.comboBoxLanguage.Connect("changed", func(self *gtk.ComboBoxText) {
 		lang := self.GetActiveID()
 		currentLanguage = lang
@@ -90,10 +116,14 @@ func (pe *partEditor) init() {
 			true,
 		)
 
-		pe.partList.activePart.smPart.partData = text
+		pe.partList.activePart.smPart.partDataJson = text
 		err := pe.partList.activePart.smPart.unmarshalPartData()
 
 		pe.setJsonError(err)
+
+		if err == nil {
+			pe.partList.activePart.smPart.marshalPartData()
+		}
 	})
 }
 
@@ -115,7 +145,7 @@ func (self *partEditor) reloadFields() {
 	)
 
 	self.textBufferPartData.SetText(
-		self.partList.activePart.smPart.partData,
+		self.partList.activePart.smPart.partDataJson,
 	)
 
 	self.checkButtonIsBlock.SetProperty(

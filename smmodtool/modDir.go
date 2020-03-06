@@ -166,13 +166,6 @@ func (self modDirectory) saveParts(parts []*part) error {
 			return err
 		}
 
-		shallowCopy := map[string]interface{}{}
-		for k, v := range part.partDataJson {
-			shallowCopy[k] = v
-		}
-
-		shallowCopy["uuid"] = part.uuid
-
 		for lang, desc := range part.descriptions {
 			if desc.Keywords == nil {
 				desc.Keywords = []string{}
@@ -182,9 +175,9 @@ func (self modDirectory) saveParts(parts []*part) error {
 		}
 
 		if part.kind {
-			blockList = append(blockList, shallowCopy)
+			blockList = append(blockList, part.partData)
 		} else {
-			partList = append(partList, shallowCopy)
+			partList = append(partList, part.partData)
 		}
 	}
 
@@ -307,7 +300,7 @@ func toSmPart(kind string, j map[string]interface{}) *smPart {
 	delete(j, "uuid")
 
 	m, _ := json.MarshalIndent(j, "", "\t")
-	p.partData = string(m)
+	p.partDataJson = string(m)
 
 	return p
 }

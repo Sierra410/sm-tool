@@ -1,13 +1,43 @@
 package main
 
 import (
-	"os/exec"
 	"regexp"
-	"runtime"
+	"unsafe"
 
 	"github.com/gotk3/gotk3/gtk"
-	"github.com/gotk3/gotk3/pango"
 )
+
+// <Very retarded stuff>
+// I have no idea how to tie some internal data to a gtk widget properly lol
+func partPtrToString(p *part) string {
+	ptr := uintptr(unsafe.Pointer(p))
+	size := unsafe.Sizeof(uintptr(0))
+	size += size / 4
+	b := make([]byte, size)
+
+	for i := uintptr(0); i < size; i++ {
+		b[i] = byte(32 + (ptr>>(i*0x6))&((1<<0x6)-1))
+	}
+
+	return string(b)
+}
+
+func stringToPartPtr(s string) *part {
+	size := unsafe.Sizeof(uintptr(0))
+	size += size / 4
+	if uintptr(len(s)) != size {
+		panic("Wrong length")
+	}
+
+	ptr := uintptr(0)
+	for i := uintptr(0); i < size; i++ {
+		ptr |= uintptr(s[i]-32) << (i * 0x6)
+	}
+
+	return (*part)(unsafe.Pointer(ptr))
+}
+
+// </Very retarded stuff>
 
 type partList struct {
 	buttonSave    *gtk.Button
@@ -76,16 +106,7 @@ func (pl *partList) init() {
 			case 12:
 				dialogInfo("...", "...")
 			case 13:
-				url := "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-
-				switch runtime.GOOS {
-				case "linux":
-					exec.Command("xdg-open", url).Start()
-				case "windows":
-					exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
-				case "darwin":
-					exec.Command("open", url).Start()
-				}
+				openUrl("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
 
 				pl.buttonCompile.Hide()
 			}
@@ -132,7 +153,12 @@ func (pl *partList) init() {
 	})
 
 	pl.buttonAddPart.Connect("clicked", func() {
-		part := pl.createNewPart(smPartNew("New part", ""))
+		smp := smPartNew("New part", "")
+
+		smp.partDataJson = defaultPartDataJson
+		smp.unmarshalPartData()
+
+		part := pl.createNewPart(smp)
 		part.setUuid(randomUuid())
 	})
 
@@ -204,45 +230,21 @@ func (self *partList) clear() {
 }
 
 func (self *partList) createNewPart(smp *smPart) *part {
-	// Building gtk.ListBoxRow
-	listBoxRow, _ := gtk.ListBoxRowNew()
-	labelName, _ := gtk.LabelNew("")
-	labelUuid, _ := gtk.LabelNew("")
+	p := newPart(smp)
 
-	labelName.SetEllipsize(pango.ELLIPSIZE_END)
+	self.pushPart(p)
 
-	box, _ := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
-	box.SetHomogeneous(true)
-	box.Container.Add(labelName)
-	box.Container.Add(labelUuid)
-
-	listBoxRow.Add(box)
-
-	part := &part{
-		partList:   self,
-		listBoxRow: listBoxRow,
-		labelName:  labelName,
-		labelUuid:  labelUuid,
-		smPart:     smp,
-	}
-
-	part.listBoxRow.Connect("activate", func() {
-		self.partEditor.setEditorActive(true)
-		part.partList.setActivePart(part)
-		part.partList.partEditor.reloadFields()
-	})
-
-	self.pushPart(part)
-
-	self.listBox.Add(part.listBoxRow)
-	part.listBoxRow.ShowAll()
-
-	return part
+	return p
 }
 
 func (self *partList) pushPart(p *part) {
 	p.index = len(self.parts)
+	p.partList = self
+
 	self.parts = append(self.parts, p)
+
+	self.listBox.Add(p.listBoxRow)
+	p.listBoxRow.ShowAll()
 }
 
 func (self *partList) isPartInList(p *part) bool {
