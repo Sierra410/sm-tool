@@ -14,12 +14,9 @@ BACK UP YOUR SHIT to prevent data loss.`
 func main() {
 	rand.Seed(time.Now().Unix())
 
-	var (
-		loadMod = ""
-	)
-
-	flag.StringVar(&loadMod, "load", loadMod, "path to a mod directory")
 	flag.Parse()
+
+	loadMod := flag.Arg(0)
 
 	if runtime.GOOS == "windows" {
 		if os.Getenv("GTK_THEME") == "" {
@@ -31,7 +28,8 @@ func main() {
 		logger.printlnImportant(betaWarning)
 
 		if loadMod != "" {
-			mainPartList.loadMod(loadMod)
+			mainPartList.setModDir(loadMod)
+			mainPartList.loadFromModDir()
 		}
 	})
 

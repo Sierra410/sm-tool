@@ -2,42 +2,11 @@ package main
 
 import (
 	"regexp"
-	"unsafe"
+	"strconv"
+	"time"
 
 	"github.com/gotk3/gotk3/gtk"
 )
-
-// <Very retarded stuff>
-// I have no idea how to tie some internal data to a gtk widget properly lol
-func partPtrToString(p *part) string {
-	ptr := uintptr(unsafe.Pointer(p))
-	size := unsafe.Sizeof(uintptr(0))
-	size += size / 4
-	b := make([]byte, size)
-
-	for i := uintptr(0); i < size; i++ {
-		b[i] = byte(32 + (ptr>>(i*0x6))&((1<<0x6)-1))
-	}
-
-	return string(b)
-}
-
-func stringToPartPtr(s string) *part {
-	size := unsafe.Sizeof(uintptr(0))
-	size += size / 4
-	if uintptr(len(s)) != size {
-		panic("Wrong length")
-	}
-
-	ptr := uintptr(0)
-	for i := uintptr(0); i < size; i++ {
-		ptr |= uintptr(s[i]-32) << (i * 0x6)
-	}
-
-	return (*part)(unsafe.Pointer(ptr))
-}
-
-// </Very retarded stuff>
 
 type partList struct {
 	buttonSave    *gtk.Button
@@ -51,7 +20,7 @@ type partList struct {
 	buttonDeletePart *gtk.Button
 	searchEntryPart  *gtk.SearchEntry
 
-	parts      []*part
+	parts      map[uintptr]*part
 	activePart *part
 
 	partEditor *partEditor
@@ -64,56 +33,26 @@ func (pl *partList) init() {
 
 	pl.buttonSortUp.Connect("clicked", func() {
 		if pl.activePart != nil && pl.activePart.index != 0 {
-			pl.swapParts(pl.activePart.index-1, pl.activePart.index)
+			pl.swapParts(
+				pl.listBox.GetRowAtIndex(pl.activePart.index-1).Native(),
+				pl.activePart.listBoxRow.Native(),
+			)
+			pl.listBox.InvalidateSort()
 		}
 	})
 
 	pl.buttonSortDown.Connect("clicked", func() {
 		if pl.activePart != nil && pl.activePart.index != (len(pl.parts)-1) {
-			pl.swapParts(pl.activePart.index+1, pl.activePart.index)
+			pl.swapParts(
+				pl.listBox.GetRowAtIndex(pl.activePart.index+1).Native(),
+				pl.activePart.listBoxRow.Native(),
+			)
+			pl.listBox.InvalidateSort()
 		}
 	})
 
-	pl.buttonCompile.Connect("clicked", func() func() {
-		c := 0
-
-		return func() {
-			switch c {
-			case 0:
-				dialogInfo("Sorry", "This function is not implemented yet.")
-			case 1:
-				dialogInfo("Sorry", "This function is not implemented.")
-			case 2:
-				dialogInfo("Sorry", "This function is still not implemented.")
-			case 3:
-				dialogInfo("Sorry", "This function is STILL not implemented!")
-			case 4:
-				dialogInfo("-_-", "No. STILL not implemented.")
-			case 5:
-				dialogInfo("-_-", "STILL not implemented.")
-			case 6:
-				dialogInfo("Seriously?", "Nope.")
-			case 7:
-				dialogInfo("...", "You DO realize that's not how it works right?.")
-			case 8:
-				dialogInfo("...", "...")
-			case 9:
-				dialogInfo("...", "Stop it. You know, I'm a program. I can do a lot of stuff. I could install viruses on your computer.")
-			case 10:
-				dialogInfo("...", "...")
-			case 11:
-				dialogInfo("...", "Do you really want me to do this?")
-			case 12:
-				dialogInfo("...", "...")
-			case 13:
-				openUrl("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
-
-				pl.buttonCompile.Hide()
-			}
-
-			c++
-		}
-	}())
+	// TODO
+	pl.buttonCompile.Hide()
 
 	pl.buttonSave.Connect("clicked", func() {
 		if pl.modDir.path == "" {
@@ -124,7 +63,7 @@ func (pl *partList) init() {
 			return
 		}
 
-		err := pl.modDir.saveParts(pl.parts)
+		err := pl.modDir.saveParts(pl.getSmParts())
 		if err != nil {
 			logger.printlnImportant(err)
 			return
@@ -135,9 +74,26 @@ func (pl *partList) init() {
 
 	pl.buttonLoad.Connect("clicked", func() {
 		dir := dialogDir("Select mod directory")
-		pl.loadMod(dir)
+		if dir == "" {
+			return
+		}
 
+		pl.setModDir(dir)
+		pl.loadFromModDir()
 	})
+
+	pl.listBox.SetSortFunc(func(row1, row2 *gtk.ListBoxRow, u uintptr) int {
+		return pl.parts[row1.Native()].index - pl.parts[row2.Native()].index
+	}, 0)
+
+	go func() {
+		for {
+			time.Sleep(time.Second / 10)
+			for _, x := range pl.parts {
+				x.labelName.SetText(strconv.Itoa(x.index))
+			}
+		}
+	}()
 
 	// It doesn't work otherwise. For some reason.
 	pl.listBox.Connect("row-selected", func(self *gtk.ListBox, listBoxRow *gtk.ListBoxRow) {
@@ -168,53 +124,29 @@ func (pl *partList) init() {
 	})
 }
 
-func (self *partList) loadMod(dir string) {
-	if dir == "" {
-		return
-	}
-
+func (self *partList) setModDir(dir string) error {
 	logger.println("Loading:", dir)
 
 	self.modDir = modDirectory{}
-	err := self.modDir.setDir(dir)
-	if err != nil {
-		logger.printlnImportant(err)
-		return
-	}
+	return self.modDir.setDir(dir)
+}
 
-	parts := self.modDir.loadParts()
-	logger.printf("Loaded %d parts\n", len(parts))
-
-	self.clear()
-	for _, p := range parts {
-		self.createNewPart(p)
-	}
-
+func (self *partList) loadFromModDir() {
+	smParts := self.modDir.loadParts()
+	logger.printf("Loaded %d parts\n", len(smParts))
 	self.partEditor.setEditorActive(false)
 	self.reloadLables()
+
+	self.clear()
+	for _, p := range smParts {
+		self.createNewPart(p)
+	}
 }
 
 func (self *partList) reloadLables() {
 	for _, p := range self.parts {
 		p.reloadLables()
 	}
-}
-
-func (self *partList) swapParts(a, b int) {
-	partA := self.parts[a]
-	partB := self.parts[b]
-
-	self.parts[b] = partA
-	partA.index = b
-
-	self.parts[a] = partB
-	partB.index = a
-
-	self.listBox.Remove(partA.listBoxRow)
-	self.listBox.Insert(partA.listBoxRow, partA.index)
-
-	self.listBox.Remove(partB.listBoxRow)
-	self.listBox.Insert(partB.listBoxRow, partB.index)
 }
 
 func (self *partList) clear() {
@@ -226,7 +158,7 @@ func (self *partList) clear() {
 		p.smPart = nil
 	}
 
-	self.parts = []*part{}
+	self.parts = map[uintptr]*part{}
 }
 
 func (self *partList) createNewPart(smp *smPart) *part {
@@ -241,14 +173,32 @@ func (self *partList) pushPart(p *part) {
 	p.index = len(self.parts)
 	p.partList = self
 
-	self.parts = append(self.parts, p)
+	self.parts[p.listBoxRow.Native()] = p
 
 	self.listBox.Add(p.listBoxRow)
 	p.listBoxRow.ShowAll()
 }
 
+func (self *partList) getSmParts() []*smPart {
+	smps := make([]*smPart, 0, len(self.parts))
+
+	for _, x := range self.parts {
+		smps = append(smps, x.smPart)
+	}
+
+	return smps
+
+	// self.listBox.GetChildren().Foreach(func(i interface{}) {
+	// 	smps = append(smps, self.parts[i.(*gtk.Widget).GObject].smPart)
+	// })
+}
+
 func (self *partList) isPartInList(p *part) bool {
-	return p.index < len(self.parts) && self.parts[p.index] == p
+	if p.listBoxRow == nil {
+		return false
+	}
+	_, ok := self.parts[p.listBoxRow.Native()]
+	return ok
 }
 
 func (self *partList) filterVisible(s string) {

@@ -53,7 +53,7 @@ func gtkInit(onReady func()) chan bool {
 		buttonDeletePart: getObject("buttonDeletePart").(*gtk.Button),
 		searchEntryPart:  getObject("searchEntryPart").(*gtk.SearchEntry),
 
-		parts:      []*part{},
+		parts:      map[uintptr]*part{},
 		partEditor: pe,
 	}
 

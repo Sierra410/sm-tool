@@ -147,7 +147,7 @@ func (self modDirectory) loadParts() []*smPart {
 	return ps
 }
 
-func (self modDirectory) saveParts(parts []*part) error {
+func (self modDirectory) saveParts(parts []*smPart) error {
 	descs := map[string]map[string]*smPartDescription{}
 	for _, lang := range languages {
 		descs[lang] = map[string]*smPartDescription{}
@@ -157,9 +157,7 @@ func (self modDirectory) saveParts(parts []*part) error {
 	partList := []interface{}{}
 
 	// Convert to more sm-ish format
-	for _, x := range parts {
-		part := x.smPart
-
+	for _, part := range parts {
 		err := part.unmarshalPartData()
 		if err != nil {
 			logger.printlnImportant(part.uuid, "json error:\n", err.Error())

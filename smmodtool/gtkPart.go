@@ -60,14 +60,7 @@ func (self *part) setTitle(s string) {
 }
 
 func (self *part) destroy() {
-	for _, x := range self.partList.parts[self.index+1:] {
-		x.index = x.index - 1
-	}
-
-	self.partList.parts = append(
-		self.partList.parts[:self.index],
-		self.partList.parts[self.index+1:]...,
-	)
+	delete(self.partList.parts, self.listBoxRow.Native())
 
 	self.listBoxRow.Destroy()
 
