@@ -1,3 +1,7 @@
+# THIS THING IS OLD AND BAD
+
+
+
 ## Download
 [Latest release](https://github.com/Sierra410/sm-tool/releases)
 
@@ -15,6 +19,8 @@ Mod directory can be passed as an argument:
 ```smmodtool.exe -load=/path/to/my/mod```
 
 ![Screenshot](https://raw.githubusercontent.com/Sierra410/sm-tool/master/screenshot.png)
+
+<!-- Outdated and removed due to addition of AO textures
 
 # Texture Compiler
 
@@ -40,4 +46,4 @@ Note:
   All files must be in PNG format.  
   If there there's at least one file in any of the groups both DIF and ASG textures will be generated.  
   If there are no textures in a group an empty image with default resolution (1024x1024px) will be generated instead.  
-  All files in the same group must have the same dimensions and the dimensions must be a power of 2!  
+  All files in the same group must have the same dimensions and the dimensions must be a power of 2!   -->
